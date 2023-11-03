@@ -1,0 +1,28 @@
+<head>
+    <title>Next Game Engine</title>
+    <link rel="stylesheet" href="../common.css">
+    <link rel="stylesheet" href="./settings.css">
+</head>
+<body>
+
+
+<div class="container">
+    <div class="top">
+        <div class="btn" onclick="redirectTo('index')">Back</div>
+    </div>
+    <div class="form">
+        <label><input type="checkbox" data-opt="pageTransition" data-opt-attr="checked" spellcheck="false"> Page
+            transition</label><br>
+        <label><input type="checkbox" data-opt="globalTransition" data-opt-attr="checked" spellcheck="false"> Global
+            transition</label><br>
+        <div class="btn" onclick="saveSettings()">Save settings</div>
+    </div>
+</div>
+
+<div class="p-con" id="p-con">
+    <div class="popup"></div>
+</div>
+
+</body>
+<script type="module" src="../common.js"></script>
+<script type="module" src="./settings.js"></script>

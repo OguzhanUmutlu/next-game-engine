@@ -1,0 +1,36 @@
+<head>
+    <title>Next Game Engine - Project</title>
+    <link rel="stylesheet" href="../common.css">
+    <link rel="stylesheet" href="./project.css">
+</head>
+
+<body>
+<div class="container">
+    <div class="left">
+        <div class="scene">
+            <canvas></canvas>
+            <img src="../../assets/start.png" class="start" onclick="startGame()" draggable="false">
+            <img src="../../assets/stop.png" class="stop" onclick="stopGame()" draggable="false">
+        </div>
+        <div class="sprites">
+            <div class="sprite-container">
+            </div>
+        </div>
+    </div>
+    <div class="right">
+        <div class="properties">
+            X: <input type="number" id="prop-x"> <span style="float: right">Y: <input type="number" id="prop-y"></span><br>
+            <input type="checkbox" id="prop-visibility"> Visibility <span style="float: right">Image: todo</span>
+        </div>
+        <div class="code"></div>
+    </div>
+</div>
+
+<div class="p-con" id="p-con">
+    <div class="popup"></div>
+</div>
+<div class="save-text"></div>
+</body>
+<script src="../../../node_modules/monaco-editor/min/vs/loader.js"></script>
+<script type="module" src="../common.js"></script>
+<script type="module" src="./project.js"></script>

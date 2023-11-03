@@ -1,0 +1,13 @@
+{
+  "name": "next-game-engine",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "keywords": [],
+  "author": "OguzhanUmutlu",
+  "license": "MIT",
+  "dependencies": {
+    "electron": "^27.0.2",
+    "monaco-editor": "^0.44.0"
+  }
+}
