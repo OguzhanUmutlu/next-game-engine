@@ -1,4 +1,4 @@
-import {app, BrowserWindow, ipcMain, Menu, MenuItem, shell} from "electron";
+import {app, BrowserWindow, dialog, ipcMain, Menu, MenuItem, shell} from "electron";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
@@ -12,6 +12,32 @@ if (!fs.existsSync(RECENT_PROJECTS)) fs.writeFileSync(RECENT_PROJECTS, "{}");
 else if (!fs.statSync(RECENT_PROJECTS).isFile()) fs.rmSync(RECENT_PROJECTS, {recursive: true});
 
 const Data = {
+    copySync: (from, dest) => {
+        const fromStat = fs.statSync(from);
+        if (fs.existsSync(dest)) fs.rmSync(dest, {recursive: true});
+        if (fromStat.isFile()) {
+            return fs.copyFileSync(from, dest);
+        }
+        const files = fs.readdirSync(from);
+        fs.mkdirSync(dest);
+        for (let i = 0; i < files.length; i++) {
+            Data.copySync(from + "/" + files[i], dest + "/" + files[i])
+        }
+    },
+    addToTrashFolder: (p, file, from) => {
+        const trashPath = path.join(p, "trash");
+        if (fs.existsSync(trashPath) && !fs.statSync(trashPath).isDirectory()) fs.rmSync(trashPath, {recursive: true});
+        if (!fs.existsSync(trashPath)) fs.mkdirSync(trashPath, {recursive: true});
+
+        const ext = path.extname(file);
+        let trashLoc = path.join(trashPath, file.slice(0, -ext.length));
+        let nmA = 0;
+        while (fs.existsSync(trashLoc + (nmA || "") + ext)) {
+            nmA++;
+        }
+        trashLoc += (nmA || "") + ext;
+        Data.copySync(from, trashLoc);
+    },
     getRecentProjects: () => JSON.parse(fs.readFileSync(RECENT_PROJECTS, "utf8")),
     updateRecentProject: p => {
         const recents = Data.getRecentProjects();
@@ -21,6 +47,11 @@ const Data = {
     deleteRecentProject: p => {
         const recents = Data.getRecentProjects();
         delete recents[p];
+        fs.writeFileSync(RECENT_PROJECTS, JSON.stringify(recents));
+    },
+    addRecentProject: p => {
+        const recents = Data.getRecentProjects();
+        recents[p] = Date.now();
         fs.writeFileSync(RECENT_PROJECTS, JSON.stringify(recents));
     },
     isProjectMissing: p => {
@@ -34,7 +65,7 @@ const Data = {
             path: p
         };
         if (!fs.existsSync(p) || !fs.statSync(p).isDirectory()) return {...defaultNext, missing: true};
-        const nextFile = path.join(p, ".meta");
+        const nextFile = path.join(p, ".next");
         if (fs.existsSync(nextFile)) {
             if (!fs.statSync(nextFile).isFile()) fs.rmSync(nextFile, {recursive: true});
             else {
@@ -55,15 +86,27 @@ const Data = {
     createProject: (name, p) => {
         if (fs.existsSync(p)) return null;
         fs.mkdirSync(p, {recursive: true});
-        fs.writeFileSync(path.join(p, ".meta"), JSON.stringify({
+        fs.writeFileSync(path.join(p, ".next"), JSON.stringify({
             name: path.basename(p),
             path: p,
+            editedTimestamp: Date.now(),
             createdTimestamp: Date.now()
         }));
-        fs.mkdirSync(path.join(p, "sprites"));
-        fs.writeFileSync(path.join(p, "sprites", "My Sprite.js"), "console.log('Hello, world!')");
+        fs.mkdirSync(path.join(p, "sprites"), {recursive: true});
+        fs.writeFileSync(path.join(p, "sprites", "My Sprite.js"), "console.log('Hello, world!')\n\nsprite.x += 10");
         fs.writeFileSync(path.join(p, "sprites", "sprites.json"), JSON.stringify([
-            {name: "My Sprite", file: "My Sprite.js", position: 0, createdTimestamp: Date.now()}
+            {
+                name: "My Sprite",
+                extension: ".js",
+                x: 0,
+                y: 0,
+                z: 0,
+                scaleX: 1,
+                scaleY: 1,
+                rotation: 0,
+                opacity: 1,
+                createdTimestamp: Date.now()
+            }
         ]));
         Data.updateRecentProject(p);
     },
@@ -71,15 +114,17 @@ const Data = {
         const next = Data.fetchProject(p);
         if (next.missing) return;
         next.editedTimestamp = Date.now();
-        const nextFile = path.join(p, ".meta");
+        const nextFile = path.join(p, ".next");
         fs.writeFileSync(nextFile, JSON.stringify(next));
     },
     fetchSprites: p => {
+        if (Data.isProjectMissing(p)) return null;
         const spritesPath = path.join(p, "sprites");
-        if (!fs.existsSync(spritesPath) || !fs.statSync(spritesPath).isDirectory()) return null;
+        if (fs.existsSync(spritesPath) && !fs.statSync(spritesPath).isDirectory()) fs.rmSync(spritesPath, {recursive: true});
+        if (!fs.existsSync(spritesPath)) fs.mkdirSync(spritesPath, {recursive: true});
         const spritesMetaPath = path.join(spritesPath, "sprites.json");
         if (fs.existsSync(spritesMetaPath) && !fs.statSync(spritesMetaPath).isFile()) fs.rmSync(spritesMetaPath, {recursive: true});
-        if (!fs.existsSync(spritesMetaPath)) fs.writeFileSync(spritesMetaPath, "{}");
+        if (!fs.existsSync(spritesMetaPath)) fs.writeFileSync(spritesMetaPath, "[]");
         let spriteMeta;
         try {
             spriteMeta = JSON.parse(fs.readFileSync(spritesMetaPath, "utf8"))
@@ -96,10 +141,11 @@ const Data = {
         if (!sprites) return null;
         for (const spr of sprites) {
             if (spr.name === name) {
-                const spritePath = path.join(p, "sprites", spr.file);
-                if (!fs.existsSync(spritePath) || !fs.statSync(spritePath).isFile()) {
-                    console.log("Failed to read the code of the sprite: " + spritePath);
-                    return null;
+                const spritePath = path.join(p, "sprites", spr.name + spr.extension);
+                if (fs.existsSync(spritePath) && !fs.statSync(spritePath).isFile()) fs.rmSync(spritePath, {recursive: true});
+                if (!fs.existsSync(spritePath)) {
+                    fs.writeFileSync(spritePath, "");
+                    return "";
                 }
                 return fs.readFileSync(spritePath, "utf8");
             }
@@ -112,36 +158,40 @@ const Data = {
         if (!sprites) return null;
         for (const spr of sprites) {
             if (spr.name === name) {
-                const spritePath = path.join(p, "sprites", spr.file);
-                if (fs.existsSync(spritePath) && !fs.statSync(spritePath).isFile()) {
-                    console.log("Unexpected directory for the sprite file: " + spritePath);
-                    return;
-                }
+                const spritePath = path.join(p, "sprites", spr.name + spr.extension);
+                if (fs.existsSync(spritePath) && !fs.statSync(spritePath).isFile()) fs.rmSync(spritePath, {recursive: true});
                 return fs.writeFileSync(spritePath, code);
             }
         }
     },
-    createSprite: (p, name) => {
+    createSprite: (p, name, extension) => {
         if (Data.isProjectMissing(p)) return;
         const sprites = Data.fetchSprites(p);
         if (!sprites) return null;
         for (const spr of sprites) {
             if (spr.name === name) return;
         }
-        let spritePath = path.join(p, "sprites", name);
-        let nmA = 0;
-        while (fs.existsSync(spritePath + (nmA || "") + ".js")) {
-            nmA++;
+        let spritePath = path.join(p, "sprites", name + extension);
+        const imagePath = path.join(p, "sprites", "images");
+        const spriteImagePath = path.join(imagePath, name + ".png");
+        if (fs.existsSync(spritePath)) {
+            Data.addToTrashFolder(p, name + extension, spritePath);
+            fs.rmSync(spritePath, {recursive: true});
         }
-        spritePath += (nmA || "") + ".js";
-        fs.writeFileSync(spritePath, "console.log('Hello, world!');\nsprite.x += 10;");
+        fs.writeFileSync(spritePath, "console.log('Hello, world!')\n\nsprite.x += 10");
+        if (fs.existsSync(imagePath) && !fs.statSync(imagePath).isDirectory()) fs.rmSync(imagePath, {recursive: true});
+        if (!fs.existsSync(imagePath)) fs.mkdirSync(imagePath, {recursive: true});
+        fs.copyFileSync(__dirname + "/src/assets/sprite.png", spriteImagePath);
         sprites.push({
             name,
-            file: name + (nmA || "") + ".js",
+            extension,
             x: 0,
             y: 0,
             z: sprites.length,
-            visibility: true,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            visible: true,
             createdTimestamp: Date.now()
         });
         const spritesPath = path.join(p, "sprites");
@@ -162,20 +212,15 @@ const Data = {
             }
         }
         if (!found) return;
-        const spriteActualPath = path.join(p, "sprites", found.file);
-        if (fs.existsSync(spriteActualPath) && fs.statSync(spriteActualPath).isFile()) {
-            const trashPath = path.join(p, "sprites", "trash");
-            if (fs.existsSync(trashPath) && !fs.statSync(trashPath).isDirectory()) fs.rmSync(trashPath, {recursive: true});
-            if (!fs.existsSync(trashPath)) fs.mkdirSync(trashPath);
-            const ext = path.extname(found.file);
-            let spritePath = path.join(trashPath, found.file.slice(0, -ext.length));
-            let nmA = 0;
-            while (fs.existsSync(spritePath + (nmA || "") + ext)) {
-                nmA++;
-            }
-            spritePath += (nmA || "") + ext;
-            fs.writeFileSync(spritePath, fs.readFileSync(spriteActualPath));
-            fs.rmSync(spriteActualPath);
+        const spriteCodePath = path.join(p, "sprites", found.name + found.extension);
+        if (fs.existsSync(spriteCodePath)) {
+            Data.addToTrashFolder(p, found.name + found.extension, spriteCodePath);
+            fs.rmSync(spriteCodePath);
+        }
+        const spriteImagePath = path.join(p, "sprites", "images", found.name + ".png");
+        if (fs.existsSync(spriteImagePath)) {
+            Data.addToTrashFolder(p, found.name + ".png", spriteImagePath);
+            fs.rmSync(spriteImagePath);
         }
         for (let i = 0; i < sprites.length; i++) {
             const spr = sprites[i];
@@ -222,6 +267,35 @@ const Data = {
         const spritesPath = path.join(p, "sprites");
         const spritesMetaPath = path.join(spritesPath, "sprites.json");
         fs.writeFileSync(spritesMetaPath, JSON.stringify(sprites));
+    },
+    setSpriteImage: (p, name, buffer) => {
+        if (Data.isProjectMissing(p)) return;
+        const sprites = Data.fetchSprites(p);
+        if (!sprites) return null;
+        for (const spr of sprites) {
+            if (spr.name === name) {
+                const imagesPath = path.join(p, "sprites", "images");
+                if (fs.existsSync(imagesPath) && !fs.statSync(imagesPath).isDirectory()) fs.rmSync(imagesPath, {recursive: true});
+                if (!fs.existsSync(imagesPath)) fs.mkdirSync(imagesPath);
+                const spritePath = path.join(p, "sprites", "images", spr.name + ".png");
+                if (fs.existsSync(spritePath) && !fs.statSync(spritePath).isFile()) fs.rmSync(spritePath, {recursive: true});
+                return fs.writeFileSync(spritePath, buffer);
+            }
+        }
+    },
+    createMissingSpriteImages: p => {
+        if (Data.isProjectMissing(p)) return;
+        const sprites = Data.fetchSprites(p);
+        if (!sprites) return null;
+        for (const spr of sprites) {
+            const imagesPath = path.join(p, "sprites", "images");
+            if (fs.existsSync(imagesPath) && !fs.statSync(imagesPath).isDirectory()) fs.rmSync(imagesPath, {recursive: true});
+            if (!fs.existsSync(imagesPath)) fs.mkdirSync(imagesPath);
+            const spritePath = path.join(p, "sprites", "images", spr.name + ".png");
+            if (fs.existsSync(spritePath) && !fs.statSync(spritePath).isFile()) fs.rmSync(spritePath, {recursive: true});
+            if (fs.existsSync(spritePath)) continue;
+            fs.copyFileSync(__dirname + "/src/assets/sprite.png", spritePath);
+        }
     }
 };
 
@@ -248,17 +322,29 @@ ipcMain.handle("fetchSpriteCode", (_, p, name) => Data.fetchSpriteCode(p, name))
 ipcMain.handle("isProjectMissing", (_, p) => Data.isProjectMissing(p));
 ipcMain.handle("openInExplorer", (_, p) => shell.openPath(os.platform() === "win32" ? p.replaceAll("/", "\\") : p));
 ipcMain.handle("saveScriptCode", (_, p, name, code) => Data.saveScriptCode(p, name, code));
-ipcMain.handle("createSprite", (_, p, name) => Data.createSprite(p, name));
+ipcMain.handle("createSprite", (_, p, name, extension) => Data.createSprite(p, name, extension));
 ipcMain.handle("deleteSprite", (_, p, name) => Data.deleteSprite(p, name));
 ipcMain.handle("setSpriteProperties", (_, p, name, props = {}) => Data.setSpriteProperties(p, name, props));
 ipcMain.handle("setBulkSpriteProperties", (_, p, spritesNew = []) => Data.setBulkSpriteProperties(p, spritesNew));
+ipcMain.handle("setSpriteImage", (_, p, name, buffer) => Data.setSpriteImage(p, name, buffer));
+ipcMain.handle("createMissingSpriteImages", (_, p) => Data.createMissingSpriteImages(p));
+ipcMain.handle("openProjectPopup", async () => {
+    const result = await dialog.showOpenDialog({
+        properties: ["openFile"],
+        filters: [
+            {name: "Next file", extensions: ["next"]}
+        ]
+    });
+    if (result.canceled) return;
+    Data.addRecentProject(path.dirname(result.filePaths[0].replaceAll("\\", "/")));
+});
 
 const win = new BrowserWindow({
     show: false,
-    minWidth: 700,
-    minHeight: 600,
-    width: 700,
-    height: 600,
+    minWidth: 1000,
+    minHeight: 700,
+    width: 1000,
+    height: 700,
     webPreferences: {
         preload: __dirname + "/src/bridge.js"
     }
@@ -276,6 +362,16 @@ projectMenu.append(new MenuItem({
         await shell.openPath(os.platform() === "win32" ? winQuery.path.replaceAll("/", "\\") : winQuery.path);
     }
 }));
+projectMenu.append(new MenuItem({
+    label: "Refresh", async click() {
+        win.webContents.reload();
+    }
+}));
+projectMenu.append(new MenuItem({
+    label: "DevTools", async click() {
+        win.webContents.toggleDevTools();
+    }
+}));
 
 let winPath = "index.html";
 let winQuery = {};
@@ -286,11 +382,11 @@ ipcMain.on("pathname", (_, path, query) => {
         win.setMenu(projectMenu);
     } else {
         win.setMenu(null);
+        //win.webContents.closeDevTools();
     }
 });
 
 win.setMenu(null);
 win.maximize();
 await win.loadFile(__dirname + "/src/pages/index/index.html");
-win.webContents.openDevTools();
 win.show();

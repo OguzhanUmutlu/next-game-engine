@@ -9,18 +9,33 @@
     <div class="left">
         <div class="scene">
             <canvas></canvas>
-            <img src="../../assets/start.png" class="start" onclick="startGame()" draggable="false">
-            <img src="../../assets/stop.png" class="stop" onclick="stopGame()" draggable="false">
+            <img src="../../assets/start.png" class="start" onclick="startGame()" draggable="false" id="start-btn">
+            <img src="../../assets/stop.png" class="stop" onclick="stopGame()" draggable="false" id="stop-btn">
         </div>
         <div class="sprites">
             <div class="sprite-container">
             </div>
         </div>
+        <div class="terminal"></div>
     </div>
     <div class="right">
         <div class="properties">
-            X: <input type="number" id="prop-x"> <span style="float: right">Y: <input type="number" id="prop-y"></span><br>
-            <input type="checkbox" id="prop-visibility"> Visibility <span style="float: right">Image: todo</span>
+            <table>
+                <tr>
+                    <td>X:</td>
+                    <td><input class="prop-t1" type="number" id="prop-x"></td>
+                    <td>Y:</td>
+                    <td><input class="prop-t1" type="number" id="prop-y"></td>
+                </tr>
+                <tr>
+                    <td>Opacity:</td>
+                    <td><input class="prop-t1" type="number" id="prop-opacity"></td>
+                    <td>Image:</td>
+                    <td>
+                        <div class="btn" onclick="selectSpriteImage()">Click to select</div>
+                    </td>
+                </tr>
+            </table>
         </div>
         <div class="code"></div>
     </div>

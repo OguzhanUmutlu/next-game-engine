@@ -23,11 +23,23 @@
 
 .sprites {
     width: calc(100% - 40px);
-    height: calc(50% - 35px);
+    height: calc(30% - 35px);
     padding: 10px;
     margin: 10px 0 10px 10px;
     background-color: #686868;
     border-radius: 10px;
+}
+
+.terminal {
+    width: calc(100% - 40px);
+    height: calc(20% - 35px);
+    padding: 10px;
+    margin: 10px 0 10px 10px;
+    background-color: black;
+    font-family: monospace, serif;
+    border-radius: 10px;
+    overflow: auto;
+    user-select: text;
 }
 
 .sprite-container {
@@ -50,6 +62,19 @@
     cursor: pointer;
 }
 
+.sprite-name {
+    position: absolute;
+    pointer-events: none;
+}
+
+.sprite > img {
+    pointer-events: none;
+    position: absolute;
+    width: 50%;
+    opacity: 0.5;
+    object-fit: cover;
+}
+
 .sprite:hover {
     scale: 1.1;
     background: rgba(255, 255, 255, 0.5);
@@ -58,6 +83,10 @@
 .sprite:hover .sprite-delete {
     opacity: 1;
     pointer-events: all;
+}
+
+.sprite:hover .sprite > img {
+    background: black;
 }
 
 .sprite-delete {
@@ -85,31 +114,48 @@
 
 .properties {
     width: calc(100% - 30px);
-    height: 70px;
+    height: 80px;
     margin: 10px 10px 10px 0;
     padding: 10px;
-    background-color: #686868;
+    background-color: #7a7a7a;
     border-radius: 10px;
+    overflow: hidden;
 }
 
-.properties > input[type=number], .properties > * > input[type=number] {
+.properties > table {
+    width: 100%;
+    height: 100%;
+}
+
+.prop-t1 {
     padding: 5px;
     width: 190px;
     font-size: 16px;
     text-align: center;
 }
 
-.properties > input[type=checkbox], .properties > * > input[type=checkbox] {
+.prop-t2 {
     margin-top: 12px;
-    translate: 0 1px;
+    translate: 0 -4px;
 }
 
 .code {
     width: calc(100% - 10px);
-    height: calc(100% - 120px);
+    height: calc(100% - 130px);
     margin: 10px 10px 10px 0;
     background-color: #1e1e1e;
     border-radius: 10px;
+}
+
+.code > textarea {
+    width: 100%;
+    height: 100%;
+    resize: none;
+    border: none;
+    border-radius: 10px;
+    background: none;
+    outline: none;
+    color: white;
 }
 
 .start, .stop {
@@ -130,4 +176,8 @@
 
 .stop {
     left: 55px;
+}
+
+input {
+    user-select: none;
 }

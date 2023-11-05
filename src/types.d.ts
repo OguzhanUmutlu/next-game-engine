@@ -16,7 +16,7 @@ type Sprite = {
     x: number,
     y: number,
     z: number,
-    visibility: boolean,
+    visible: boolean,
     file: string,
     createdTimestamp: number
 };
@@ -33,10 +33,13 @@ type Bridge = {
     isProjectMissing(path: string): Promise<boolean>
     openInExplorer(path: string): Promise<void>
     saveScriptCode(path: string, name: string, code: string): Promise<void>
-    createSprite(path: string, name: string): Promise<void>
+    createSprite(path: string, name: string, extension: string): Promise<void>
     deleteSprite(path: string, name: string): Promise<void>
     setSpriteProperties(path: string, name: string, props: Partial<Sprite>): Promise<void>
     setBulkSpriteProperties(path: string, sprites: Partial<Sprite>[]): Promise<void>
+    setSpriteImage(path: string, name: string, buffer: Int8Array): Promise<void>
+    createMissingSpriteImages(path: string): Promise<void>
+    openProjectPopup(): Promise<void>
 };
 
 // @ts-ignore

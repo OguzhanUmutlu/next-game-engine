@@ -68,7 +68,7 @@ body {
     flex-direction: column;
 }
 
-input {
+input, select {
     outline: none;
     border-radius: 5px;
     padding: 10px;
@@ -78,9 +78,13 @@ input {
     font-size: 20px;
 }
 
-input:focus {
+input:focus, select:focus {
     box-shadow: 0 0 10px black;
     scale: 1.1;
+}
+
+option {
+    background: #36393F;
 }
 
 ::-webkit-scrollbar {

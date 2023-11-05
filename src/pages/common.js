@@ -1,6 +1,8 @@
 addEventListener("keydown", e => e.key === "F5" && location.reload());
 const popupContainer = document.getElementById("p-con");
 
+window.INVALID_NAME_REGEXP = /[\/\\"'*;\-?\[\]()~!${}<>#@&|\t\n\r]+/g;
+window.VALID_NAME_REGEXP = /^[^\/\\"'*;\-?\[\]()~!${}<>#@&|\t\n\r]+$/;
 const loadPromise = new Promise(r => addEventListener("load", r));
 window.waitFrame = () => new Promise(r => requestAnimationFrame(r));
 window.waitTick = () => new Promise(r => setTimeout(r));
@@ -8,7 +10,8 @@ window.waitLoad = () => loadPromise;
 
 const defaultSettings = {
     pageTransition: true,
-    globalTransition: true
+    globalTransition: true,
+    monacoEditor: true
 };
 window.engineSettings = {
     ...defaultSettings, ...JSON.parse(localStorage.getItem("settings") ?? "{}")
@@ -55,9 +58,6 @@ window.setPopupText = (html, buttons = [["Close", hidePopup]]) => {
             btn.addEventListener("click", () => b[1]());
             btnL.appendChild(btn);
         }
-        btnL.style.position = "absolute";
-        btnL.style.marginTop = "25%";
-        btnL.style.translate = "0 -50%";
         popup.appendChild(btnL);
     }
 };
