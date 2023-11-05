@@ -9,14 +9,18 @@
     <div class="left">
         <div class="scene">
             <canvas></canvas>
-            <img src="../../assets/start.png" class="start" onclick="startGame()" draggable="false" id="start-btn">
-            <img src="../../assets/stop.png" class="stop" onclick="stopGame()" draggable="false" id="stop-btn">
+            <img src="../../assets/start.png" class="start" onclick="startGame()" draggable="false">
+            <img src="../../assets/stop.png" class="stop" onclick="stopGame()" draggable="false">
+            <img src="../../assets/maximize.png" class="maximize" onclick="maximizeScene()" draggable="false"
+                 id="maximize-btn">
         </div>
         <div class="sprites">
             <div class="sprite-container">
             </div>
         </div>
-        <div class="terminal"></div>
+        <div class="terminal">
+            <div class="clear"><img src="../../assets/clear.png" draggable="false" onclick="clearTerminal()"></div>
+        </div>
     </div>
     <div class="right">
         <div class="properties">
@@ -26,10 +30,14 @@
                     <td><input class="prop-t1" type="number" id="prop-x"></td>
                     <td>Y:</td>
                     <td><input class="prop-t1" type="number" id="prop-y"></td>
-                </tr>
-                <tr>
                     <td>Opacity:</td>
                     <td><input class="prop-t1" type="number" id="prop-opacity"></td>
+                </tr>
+                <tr>
+                    <td>Scale X:</td>
+                    <td><input class="prop-t1" type="number" id="prop-scaleX"></td>
+                    <td>Scale Y:</td>
+                    <td><input class="prop-t1" type="number" id="prop-scaleY"></td>
                     <td>Image:</td>
                     <td>
                         <div class="btn" onclick="selectSpriteImage()">Click to select</div>
@@ -41,6 +49,13 @@
     </div>
 </div>
 
+<div class="scene-full">
+    <img src="../../assets/start.png" class="start" onclick="startGame()" draggable="false">
+    <img src="../../assets/stop.png" class="stop" onclick="stopGame()" draggable="false">
+    <img src="../../assets/minimize.png" class="minimize" onclick="minimizeScene()" draggable="false" id="minimize-btn">
+</div>
+
+<div class="holding-sprite"></div>
 <div class="p-con" id="p-con">
     <div class="popup"></div>
 </div>

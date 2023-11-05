@@ -2,16 +2,24 @@ const query = new URLSearchParams(location.search);
 const path = query.get("path");
 if (await __bridge__.isProjectMissing(path)) location.href = redirectTo("index", "");
 await __bridge__.updateProjectEditedTimestamp(path);
+const project = await __bridge__.fetchProject(path);
+document.title = "Next Game Engine - " + project.name;
 
 const spritesDiv = document.querySelector(".sprite-container");
 const codeDiv = document.querySelector(".code");
 const saveText = document.querySelector(".save-text");
 const sceneDiv = document.querySelector(".scene");
+const sceneFullDiv = document.querySelector(".scene-full");
 const propXDiv = document.getElementById("prop-x");
 const propYDiv = document.getElementById("prop-y");
 const propOpacityDiv = document.getElementById("prop-opacity");
-const stopBtn = document.getElementById("stop-btn");
+const propScaleXDiv = document.getElementById("prop-scaleX");
+const propScaleYDiv = document.getElementById("prop-scaleY");
+const stopBtn = document.querySelectorAll(".stop");
 const terminalDiv = document.querySelector(".terminal");
+const minimizeBtn = document.getElementById("minimize-btn");
+const maximizeBtn = document.getElementById("maximize-btn");
+const spriteHoldDiv = document.querySelector(".holding-sprite");
 const canvas = document.querySelector(".scene > canvas");
 /*** @type {CanvasRenderingContext2D} */
 const ctx = canvas.getContext("2d");
@@ -28,6 +36,9 @@ let lastPropCode = "";
 let lastPropXDivVal = "";
 let lastPropYDivVal = "";
 let lastPropOpacityDivVal = "";
+let lastPropScaleXDivVal = "";
+let lastPropScaleYDivVal = "";
+let holdingSprite = null;
 
 async function updateSelectSprite(name) {
     if (!loadedEditor || !cachedSprites || !spriteObjects) return;
@@ -37,15 +48,20 @@ async function updateSelectSprite(name) {
     loadedEditor.updateOptions({readOnly: !name});
     propXDiv.readOnly = !name;
     propYDiv.readOnly = !name;
-    propOpacityDiv.style.pointerEvents = name ? "all" : "none";
+    propOpacityDiv.readOnly = !name;
+    propScaleXDiv.readOnly = !name;
+    propScaleYDiv.readOnly = !name;
     const sprite = spriteObjects.find(i => i.name === name);
+    const cachedSprite = cachedSprites.find(i => i.name === name);
     const code = await __bridge__.fetchSpriteCode(path, name);
-    if (!sprite || code === null) {
+    if (!sprite || !cachedSprite || code === null) {
         selectedSprite = null;
         loadedEditor.setValue("");
         propXDiv.value = "";
         propYDiv.value = "";
         propOpacityDiv.value = "";
+        propScaleXDiv.value = "";
+        propScaleYDiv.value = "";
         if (name) await refreshSprites();
         return;
     }
@@ -53,15 +69,20 @@ async function updateSelectSprite(name) {
         saveText.innerText = "";
         clearTimeout(saveTimeout);
         clearTimeout(saveClearTimeout);
+        if (!loadedEditor.__textarea) {
+            monaco.editor.setModelLanguage(loadedEditor.getModel(), cachedSprite.extension === ".js" ? "javascript" : "python");
+        }
     }
-    if (sprite) {
-        if (lastPropXDivVal !== sprite.x) propXDiv.value = sprite.x;
-        if (lastPropYDivVal !== sprite.y) propYDiv.value = sprite.y;
-        if (lastPropOpacityDivVal !== sprite.opacity) propOpacityDiv.value = sprite.opacity;
-        lastPropXDivVal = sprite.x;
-        lastPropYDivVal = sprite.y;
-        lastPropOpacityDivVal = sprite.opacity;
-    }
+    if (lastPropXDivVal !== sprite.x) propXDiv.value = sprite.x;
+    if (lastPropYDivVal !== sprite.y) propYDiv.value = sprite.y;
+    if (lastPropOpacityDivVal !== sprite.opacity) propOpacityDiv.value = sprite.opacity;
+    if (lastPropScaleXDivVal !== sprite.scaleX) propScaleXDiv.value = sprite.scaleX;
+    if (lastPropScaleYDivVal !== sprite.scaleY) propScaleYDiv.value = sprite.scaleY;
+    lastPropXDivVal = sprite.x;
+    lastPropYDivVal = sprite.y;
+    lastPropOpacityDivVal = sprite.opacity;
+    lastPropScaleXDivVal = sprite.scaleX;
+    lastPropScaleYDivVal = sprite.scaleY;
     if (lastPropCode !== code) loadedEditor.setValue(code);
     lastPropCode = code;
     selectedSprite = name;
@@ -109,7 +130,7 @@ async function refreshSprites() {
         setPopupText("<h1>Add sprite</h1>" +
             "<input id='sprite-name' style='font-size: 16px' placeholder='Sprite name...'><br>" +
             "<select id='sprite-extension'>" +
-            "   <option value='.js'>Python</option>" +
+            "   <option value='.py'>Python</option>" +
             "   <option selected value='.js'>JavaScript</option>" +
             "</select>", [
             ["Cancel", () => {
@@ -248,7 +269,8 @@ declare global {
             Object.assign(textarea, opts);
         },
         setValue: value => textarea.value = value,
-        getValue: () => textarea.value
+        getValue: () => textarea.value,
+        __textarea: true
     };
     let last;
     setInterval(() => {
@@ -268,7 +290,7 @@ function render() {
         const img = spriteImages[spr.name];
         if (img) {
             ctx.save();
-            ctx.translate(spr.x + W / 2 - img.width / 2, -spr.y + H / 2 - img.height / 2);
+            ctx.translate(spr.x + W / 2, -spr.y + H / 2);
             ctx.scale(spr.scaleX, spr.scaleY);
             if (spr.rotation !== 0) ctx.rotate(spr.rotation);
             if (spr.opacity !== 1) ctx.globalAlpha = spr.opacity;
@@ -284,6 +306,8 @@ function render() {
         propXDiv.value = spr.x;
         propYDiv.value = spr.y;
         propOpacityDiv.value = spr.opacity;
+        propScaleXDiv.value = spr.scaleX;
+        propScaleYDiv.value = spr.scaleY;
     }
     requestAnimationFrame(render);
 }
@@ -299,12 +323,23 @@ function logToTerminal(msg) {
     line.innerText += msg.trimStart();
     terminalDiv.appendChild(line);
     terminalDiv.scrollTop = terminalDiv.scrollHeight;
+    const children = [...terminalDiv.children];
+    for (let i = 1; i < children.length - 100; i++) {
+        children[i].remove();
+    }
+}
+
+window.clearTerminal = function clearTerminal() {
+    const children = [...terminalDiv.children];
+    for (let i = 1; i < children.length; i++) {
+        children[i].remove();
+    }
 }
 
 window.startGame = async function startGame() {
     await stopGame();
     await refreshSprites();
-    stopBtn.hidden = false;
+    for (const btn of stopBtn) btn.hidden = false;
     for (let i = 0; i < cachedSprites.length; i++) {
         const spr = cachedSprites[i];
         spriteObjects[i].code = await __bridge__.fetchSpriteCode(path, spr.name);
@@ -341,7 +376,7 @@ window.stopGame = async function stopGame() {
     for (let i = 0; i < spriteObjects.length; i++) {
         delete spriteObjects[i].id;
     }
-    stopBtn.hidden = true;
+    for (const btn of stopBtn) btn.hidden = true;
     await __bridge__.setBulkSpriteProperties(path, spriteObjects);
     await updateSelectSprite(selectedSprite);
     await refreshSprites();
@@ -393,6 +428,14 @@ setInterval(async () => {
         lastPropOpacityDivVal = sprite.opacity = (propOpacityDiv.value * 1) || 0;
         upd = true;
     }
+    if (lastPropScaleXDivVal !== (propScaleXDiv.value * 1) || 0) {
+        lastPropScaleXDivVal = sprite.scaleX = (propScaleXDiv.value * 1) || 0;
+        upd = true;
+    }
+    if (lastPropScaleYDivVal !== (propScaleYDiv.value * 1) || 0) {
+        lastPropScaleYDivVal = sprite.scaleY = (propScaleYDiv.value * 1) || 0;
+        upd = true;
+    }
     if (upd) {
         if (currentWorker) currentWorker.postMessage(spriteObjects);
         await __bridge__.setSpriteProperties(path, selectedSprite, sprite);
@@ -401,30 +444,49 @@ setInterval(async () => {
 
 function updateWorkerMouse() {
     if (!currentWorker) return;
-    mouse.x = mouse.__x - canvas.width / 2;
-    mouse.y = -mouse.__y + canvas.height / 2;
+    mouse.x = Math.round(mouse.__x * (isMaximized() ? canvas.width / innerWidth : 1) - canvas.width / 2);
+    mouse.y = Math.round(-mouse.__y * (isMaximized() ? canvas.height / innerHeight : 1) + canvas.height / 2);
     currentWorker.postMessage({
         event: "mouse",
         data: mouse
     });
 }
 
+function isMaximized() {
+    return !sceneFullDiv.hidden;
+}
+
 function updateWorkerScreen() {
     if (!currentWorker) return;
     currentWorker.postMessage({
         event: "screen",
-        data: {width: canvas.width, height: canvas.height}
+        data: {width: canvas.width, height: canvas.height, isMaximized: isMaximized()}
     });
 }
 
+window.maximizeScene = function maximizeScene() {
+    canvas.remove();
+    sceneFullDiv.appendChild(canvas);
+    sceneFullDiv.hidden = false;
+};
+
+window.minimizeScene = function minimizeScene() {
+    canvas.remove();
+    sceneDiv.appendChild(canvas);
+    sceneFullDiv.hidden = true;
+};
+
 const mouse = {__x: 0, __y: 0, x: 0, y: 0, down: {}};
-sceneDiv.addEventListener("mousedown", e => {
+canvas.addEventListener("mousedown", e => {
     mouse.down[e.button] = true;
     updateWorkerMouse();
+    if (!currentWorker) {
+        //todo: moving sprites with mouse
+    }
 });
-sceneDiv.addEventListener("mousemove", e => {
-    mouse.__x = e.offsetX;
-    mouse.__y = e.offsetY;
+canvas.addEventListener("mousemove", e => {
+    mouse.__x = e.pageX - 10;
+    mouse.__y = e.pageY - 10;
     updateWorkerMouse();
 });
 addEventListener("mouseup", e => {
@@ -432,11 +494,10 @@ addEventListener("mouseup", e => {
     updateWorkerMouse();
 });
 
-stopBtn.hidden = true;
+for (const btn of stopBtn) btn.hidden = true;
+sceneFullDiv.hidden = true;
 
 addEventListener("resize", () => {
     updateWorkerMouse();
     updateWorkerScreen();
 });
-
-// todo: sprite.zIndex = 10;

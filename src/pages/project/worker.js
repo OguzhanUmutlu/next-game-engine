@@ -32,14 +32,14 @@ onmessage = async ev => {
 
     let [mouse, frozenMouse] = frozenBuilder({x: 0, y: 0, down: {}});
     let [keyboard, frozenKeyboard] = frozenBuilder({keys: {}});
-    let [screen, frozenScreen] = frozenBuilder({width: 0, height: 0});
+    let [screen, frozenScreen] = frozenBuilder({width: 0, height: 0, isMaximized: false});
     const mouseActions = [];
     const keyboardActions = [];
     const Input = {};
     Object.defineProperties(Input, {
         mouse: {get: () => frozenMouse},
-        keyboard: {get: () => frozenKeyboard},
-    })
+        keyboard: {get: () => frozenKeyboard}
+    });
 
     function update() {
         postMessage(sprites);
@@ -85,7 +85,7 @@ onmessage = async ev => {
         self.__spriteTmp__ = [Input, frozenScreen, sprite, (...m) => postMessage({debug: m.map(i => toString(i).split("\n")).flat()})];
         let err;
         const mdl = await import(URL.createObjectURL(new Blob([
-            "const [Input, Screen, sprite, debug] = __spriteTmp__;" +
+            "const [Input, screen, sprite, debug] = __spriteTmp__;" +
             "const updateSprite = sprite.update;" +
             "delete sprite.update;" +
             "delete self.__spriteTmp__;" +

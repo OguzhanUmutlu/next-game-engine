@@ -14,11 +14,26 @@
 }
 
 .scene {
+    position: relative;
     width: calc(100% - 20px);
     height: calc(50% - 15px);
     margin: 10px 0 10px 10px;
     background-color: white;
     border-radius: 10px;
+}
+
+.scene-full {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: white;
+}
+
+canvas {
+    width: 100%;
+    height: 100%;
 }
 
 .sprites {
@@ -31,6 +46,7 @@
 }
 
 .terminal {
+    position: relative;
     width: calc(100% - 40px);
     height: calc(20% - 35px);
     padding: 10px;
@@ -40,6 +56,21 @@
     border-radius: 10px;
     overflow: auto;
     user-select: text;
+}
+
+.clear {
+    position: fixed;
+    cursor: pointer;
+    background: transparent;
+}
+
+.clear > img {
+    width: 32px;
+    background: transparent;
+}
+
+.clear:hover {
+    scale: 1.1;
 }
 
 .sprite-container {
@@ -129,7 +160,7 @@
 
 .prop-t1 {
     padding: 5px;
-    width: 190px;
+    width: 100px;
     font-size: 16px;
     text-align: center;
 }
@@ -158,10 +189,10 @@
     color: white;
 }
 
-.start, .stop {
+.start, .stop, .minimize, .maximize {
     position: absolute;
-    left: 10px;
-    top: 10px;
+    left: 0;
+    top: 0;
     width: 20px;
     height: 20px;
     background: #6c6c6c;
@@ -170,12 +201,18 @@
     cursor: pointer;
 }
 
-.start:hover, .stop:hover {
+.start:hover, .stop:hover, .minimize:hover, .maximize:hover {
     filter: brightness(1.5);
 }
 
 .stop {
-    left: 55px;
+    left: 45px;
+}
+
+.minimize, .maximize {
+    left: auto;
+    right: 0;
+    top: 0;
 }
 
 input {

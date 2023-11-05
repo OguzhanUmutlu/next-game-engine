@@ -368,8 +368,18 @@ projectMenu.append(new MenuItem({
     }
 }));
 projectMenu.append(new MenuItem({
+    label: "Settings", async click() {
+        await win.webContents.executeJavaScript("window.settingsPopup()");
+    }
+}));
+projectMenu.append(new MenuItem({
     label: "DevTools", async click() {
         win.webContents.toggleDevTools();
+    }
+}));
+projectMenu.append(new MenuItem({
+    label: "Force stop", async click() {
+        await win.webContents.executeJavaScript("window.stop()");
     }
 }));
 

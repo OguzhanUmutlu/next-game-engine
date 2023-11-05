@@ -82,6 +82,25 @@ if (engineSettings.globalTransition) {
     document.querySelector(":root").style.setProperty("--global-transition", "all .2s");
 }
 
+window.settingsPopup = async () => {
+    setPopupText("<label><input type='checkbox' data-opt='pageTransition' data-opt-attr='checked' spellCheck='false'> Page transition</label><br>" +
+        "<label><input type='checkbox' data-opt='globalTransition' data-opt-attr='checked' spellCheck='false'> Global transition</label><br>" +
+        "<label><input type='checkbox' data-opt='monacoEditor' data-opt-attr='checked' spellCheck='false'> Monaco Editor</label><br>", [
+        ["Cancel", hidePopup],
+        ["Save settings", async () => {
+            document.querySelectorAll("[data-opt]").forEach(i => {
+                engineSettings[i.getAttribute("data-opt")] = i[i.getAttribute("data-opt-attr") ?? "value"];
+            });
+            saveEngineSettings();
+            setPopupText("Successfully saved settings!");
+        }, "#25e025"]
+    ]);
+    showPopup();
+    document.querySelectorAll("[data-opt]").forEach(i => {
+        i[i.getAttribute("data-opt-attr") ?? "value"] = engineSettings[i.getAttribute("data-opt")];
+    });
+};
+
 document.body.style.translate = "0";
 document.body.style.opacity = "1";
 document.body.style.pointerEvents = "auto";
