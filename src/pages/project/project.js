@@ -40,6 +40,13 @@ let lastPropScaleXDivVal = "";
 let lastPropScaleYDivVal = "";
 let holdingSprite = null;
 
+function loadSpriteImage(name) {
+    const img = new Image();
+    const t = Date.now();
+    img.src = path + "/sprites/images/" + name + ".png?t=" + t;
+    spriteImages[name] = {img, t};
+}
+
 async function updateSelectSprite(name) {
     if (!loadedEditor || !cachedSprites || !spriteObjects) return;
     if (!name || !cachedSprites.some(i => i.name === name)) {
@@ -62,7 +69,6 @@ async function updateSelectSprite(name) {
         propOpacityDiv.value = "";
         propScaleXDiv.value = "";
         propScaleYDiv.value = "";
-        console.log(1);
         if (name) await refreshSprites();
         return;
     }
@@ -101,7 +107,8 @@ async function refreshSprites() {
         name.classList.add("sprite-name");
         name.innerText = sprite.name;
         const img = document.createElement("img");
-        img.src = path + "/sprites/images/" + sprite.name + ".png";
+        const imgData = spriteImages[sprite.name];
+        img.src = path + "/sprites/images/" + sprite.name + ".png?t=" + (imgData ? imgData.t : Date.now());
         div.appendChild(img);
         div.appendChild(name);
         const deleteBtn = document.createElement("div");
@@ -114,6 +121,7 @@ async function refreshSprites() {
                     await __bridge__.deleteSprite(path, sprite.name);
                     await refreshSprites();
                     hidePopup();
+                    delete spriteImages[sprite.name];
                 }, "#25e025"]
             ]);
             showPopup();
@@ -150,6 +158,7 @@ async function refreshSprites() {
                 await refreshSprites();
                 clearInterval(interval);
                 hidePopup();
+                loadSpriteImage(name);
             }, "#25e025"]
         ]);
         showPopup();
@@ -164,7 +173,6 @@ async function refreshSprites() {
     spritesDiv.appendChild(div);
     spriteObjects = [];
     for (const spr of cachedSprites) {
-        console.log({...spr});
         spriteObjects.push({
             name: spr.name,
             x: spr.x,
@@ -176,16 +184,12 @@ async function refreshSprites() {
             opacity: spr.opacity
         });
     }
-    spriteImages = {};
-    for (const spr of cachedSprites) {
-        const img = new Image();
-        img.src = path + "/sprites/images/" + spr.name + ".png";
-        spriteImages[spr.name] = img;
-    }
     await updateSelectSprite(selectedSprite, true);
 }
 
 await refreshSprites();
+spriteImages = {};
+for (const spr of cachedSprites) loadSpriteImage(spr.name);
 
 addEventListener("focus", async () => {
     if (await __bridge__.isProjectMissing(path)) location.href = redirectTo("index", "");
@@ -298,7 +302,7 @@ function render() {
             if (spr.rotation !== 0) ctx.rotate(spr.rotation);
             if (spr.opacity !== 1) ctx.globalAlpha = spr.opacity;
             try {
-                ctx.drawImage(img, -img.width / 2, -img.height / 2);
+                ctx.drawImage(img.img, -img.img.width / 2, -img.img.height / 2);
             } catch (e) {
             }
             ctx.restore();
@@ -406,6 +410,7 @@ window.selectSpriteImage = async function selectSpriteImage() {
             await __bridge__.setSpriteImage(path, selectedSprite, new Int8Array(content));
             setPopupText("Sprite's image has been updated!");
             showPopup();
+            loadSpriteImage(selectedSprite);
             await refreshSprites();
         };
         reader.readAsArrayBuffer(file);
@@ -428,7 +433,6 @@ setInterval(async () => {
         upd = true;
     }
     if (lastPropOpacityDivVal !== (propOpacityDiv.value * 1) || 0) {
-        console.log(propOpacityDiv.value * 1, sprite.opacity, JSON.stringify(sprite));
         lastPropOpacityDivVal = sprite.opacity = (propOpacityDiv.value * 1) || 0;
         upd = true;
     }
