@@ -13,11 +13,13 @@ const sceneFullDiv = document.querySelector(".scene-full");
 const propXDiv = document.getElementById("prop-x");
 const propYDiv = document.getElementById("prop-y");
 const propOpacityDiv = document.getElementById("prop-opacity");
+const propRotationDiv = document.getElementById("prop-rotation");
 const propScaleXDiv = document.getElementById("prop-scaleX");
 const propScaleYDiv = document.getElementById("prop-scaleY");
 const stopBtn = document.querySelectorAll(".stop");
 const terminalDiv = document.querySelector(".terminal");
 const spriteHoldDiv = document.querySelector(".holding-sprite");
+const propertiesDiv = document.querySelector(".properties");
 const canvas = document.querySelector(".scene > canvas");
 /*** @type {CanvasRenderingContext2D} */
 const ctx = canvas.getContext("2d");
@@ -35,6 +37,7 @@ let lastPropCode = "";
 let lastPropXDivVal = "";
 let lastPropYDivVal = "";
 let lastPropOpacityDivVal = "";
+let lastPropRotationDivVal = "";
 let lastPropScaleXDivVal = "";
 let lastPropScaleYDivVal = "";
 let holdingSprite = null;
@@ -54,11 +57,7 @@ async function updateSelectSprite(name) {
         name = (cachedSprites[0] ?? {name: null}).name;
     }
     loadedEditor.updateOptions({readOnly: !name});
-    propXDiv.readOnly = !name;
-    propYDiv.readOnly = !name;
-    propOpacityDiv.readOnly = !name;
-    propScaleXDiv.readOnly = !name;
-    propScaleYDiv.readOnly = !name;
+    propertiesDiv.style.pointerEvents = name ? "all" : "none";
     const sprite = spriteObjects.find(i => i.name === name);
     const cachedSprite = cachedSprites.find(i => i.name === name);
     const code = await __bridge__.fetchSpriteCode(path, name);
@@ -68,6 +67,7 @@ async function updateSelectSprite(name) {
         propXDiv.value = "";
         propYDiv.value = "";
         propOpacityDiv.value = "";
+        propRotationDiv.value = "";
         propScaleXDiv.value = "";
         propScaleYDiv.value = "";
         if (name) await refreshSprites();
@@ -85,11 +85,12 @@ async function updateSelectSprite(name) {
     if (switchedSprite || lastPropXDivVal !== sprite.x) propXDiv.value = sprite.x;
     if (switchedSprite || lastPropYDivVal !== sprite.y) propYDiv.value = sprite.y;
     if (switchedSprite || lastPropOpacityDivVal !== sprite.opacity) propOpacityDiv.value = sprite.opacity;
+    if (switchedSprite || lastPropRotationDivVal !== sprite.rotation) propRotationDiv.value = sprite.rotation;
     if (switchedSprite || lastPropScaleXDivVal !== sprite.scaleX) propScaleXDiv.value = sprite.scaleX;
     if (switchedSprite || lastPropScaleYDivVal !== sprite.scaleY) propScaleYDiv.value = sprite.scaleY;
     lastPropXDivVal = sprite.x;
     lastPropYDivVal = sprite.y;
-    lastPropOpacityDivVal = sprite.opacity;
+    lastPropRotationDivVal = sprite.rotation;
     lastPropScaleXDivVal = sprite.scaleX;
     lastPropScaleYDivVal = sprite.scaleY;
     if (lastPropCode !== code) loadedEditor.setValue(code);
@@ -317,6 +318,7 @@ function render() {
         propXDiv.value = spr.x;
         propYDiv.value = spr.y;
         propOpacityDiv.value = spr.opacity;
+        propRotationDiv.value = spr.rotation;
         propScaleXDiv.value = spr.scaleX;
         propScaleYDiv.value = spr.scaleY;
     }
@@ -445,6 +447,10 @@ setInterval(async () => {
     }
     if (lastPropOpacityDivVal !== (propOpacityDiv.value * 1) || 0) {
         lastPropOpacityDivVal = sprite.opacity = (propOpacityDiv.value * 1) || 0;
+        upd = true;
+    }
+    if (lastPropRotationDivVal !== (propRotationDiv.value * 1) || 0) {
+        lastPropRotationDivVal = sprite.rotation = (propRotationDiv.value * 1) || 0;
         upd = true;
     }
     if (lastPropScaleXDivVal !== (propScaleXDiv.value * 1) || 0) {

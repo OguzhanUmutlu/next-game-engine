@@ -373,11 +373,21 @@ projectMenu.append(new MenuItem({
         await shell.openPath(os.platform() === "win32" ? winQuery.path.replaceAll("/", "\\") : winQuery.path);
     }
 }));
-projectMenu.append(new MenuItem({
-    label: "Open in VSCode", async click() {
+const openInMenu = new Menu();
+openInMenu.append(new MenuItem({
+    label: "Intellij IDEA", async click() {
         if (!winQuery.path) return;
         child_process.execSync("code " + JSON.stringify(winQuery.path));
     }
+}));
+openInMenu.append(new MenuItem({
+    label: "Visual Studio Code", async click() {
+        if (!winQuery.path) return;
+        child_process.execSync("code " + JSON.stringify(winQuery.path));
+    }
+}));
+projectMenu.append(new MenuItem({
+    label: "Open in", type: "submenu", submenu: openInMenu
 }));
 projectMenu.append(new MenuItem({
     label: "Refresh", async click() {
