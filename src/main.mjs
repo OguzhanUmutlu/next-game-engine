@@ -310,6 +310,26 @@ const Data = {
     }
 };
 
+const ideaCmd = {win32: "idea64.exe", darwin: "idea"}[os.platform()] || "idea.sh";
+const phpStormCmd = {win32: "phpstorm64.exe", darwin: "phpstorm"}[os.platform()] || "phpstorm.sh";
+const webStormCmd = {win32: "webstorm.exe", darwin: "webstorm"}[os.platform()] || "webstorm.sh";
+
+function hasVSC() {
+    return new Promise(r => child_process.exec("where code", err => r(!err)));
+}
+
+function hasIdea() {
+    return new Promise(r => child_process.exec("where " + ideaCmd, err => r(!err)));
+}
+
+function hasPhpStorm() {
+    return new Promise(r => child_process.exec("where " + phpStormCmd, err => r(!err)));
+}
+
+function hasWebStorm() {
+    return new Promise(r => child_process.exec("where " + webStormCmd, err => r(!err)));
+}
+
 ipcMain.handle("getRecentProjects", () => {
     const projects = [];
     const recent = Data.getRecentProjects();
@@ -367,25 +387,27 @@ projectMenu.append(new MenuItem({
         await win.loadFile(__dirname + "/src/pages/index/index.html");
     }
 }));
-projectMenu.append(new MenuItem({
-    label: "Open in explorer", async click() {
+const openInMenu = new Menu();
+openInMenu.append(new MenuItem({
+    label: "File explorer", async click() {
         if (!winQuery.path) return;
         await shell.openPath(os.platform() === "win32" ? winQuery.path.replaceAll("/", "\\") : winQuery.path);
     }
 }));
-const openInMenu = new Menu();
-openInMenu.append(new MenuItem({
-    label: "Intellij IDEA", async click() {
-        if (!winQuery.path) return;
-        child_process.execSync("code " + JSON.stringify(winQuery.path));
-    }
-}));
-openInMenu.append(new MenuItem({
-    label: "Visual Studio Code", async click() {
-        if (!winQuery.path) return;
-        child_process.execSync("code " + JSON.stringify(winQuery.path));
-    }
-}));
+for (const editor of [
+    [hasIdea(), ideaCmd, "Intellij IDEA"],
+    [hasPhpStorm(), phpStormCmd, "Php Storm"],
+    [hasWebStorm(), webStormCmd, "Web Storm"],
+    [hasVSC(), "code", "Visual Studio Code"]
+]) {
+    if (!editor[0]) continue;
+    openInMenu.append(new MenuItem({
+        label: editor[2], async click() {
+            if (!winQuery.path) return;
+            child_process.exec(editor[1] + " " + JSON.stringify(winQuery.path), r => r);
+        }
+    }));
+}
 projectMenu.append(new MenuItem({
     label: "Open in", type: "submenu", submenu: openInMenu
 }));
