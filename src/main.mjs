@@ -191,7 +191,7 @@ const Data = {
             scaleX: 1,
             scaleY: 1,
             rotation: 0,
-            visible: true,
+            opacity: 1,
             createdTimestamp: Date.now()
         });
         const spritesPath = path.join(p, "sprites");

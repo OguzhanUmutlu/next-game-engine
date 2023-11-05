@@ -62,10 +62,12 @@ async function updateSelectSprite(name) {
         propOpacityDiv.value = "";
         propScaleXDiv.value = "";
         propScaleYDiv.value = "";
+        console.log(1);
         if (name) await refreshSprites();
         return;
     }
-    if (selectedSprite !== name) {
+    const switchedSprite = selectedSprite !== name;
+    if (switchedSprite) {
         saveText.innerText = "";
         clearTimeout(saveTimeout);
         clearTimeout(saveClearTimeout);
@@ -73,11 +75,11 @@ async function updateSelectSprite(name) {
             monaco.editor.setModelLanguage(loadedEditor.getModel(), cachedSprite.extension === ".js" ? "javascript" : "python");
         }
     }
-    if (lastPropXDivVal !== sprite.x) propXDiv.value = sprite.x;
-    if (lastPropYDivVal !== sprite.y) propYDiv.value = sprite.y;
-    if (lastPropOpacityDivVal !== sprite.opacity) propOpacityDiv.value = sprite.opacity;
-    if (lastPropScaleXDivVal !== sprite.scaleX) propScaleXDiv.value = sprite.scaleX;
-    if (lastPropScaleYDivVal !== sprite.scaleY) propScaleYDiv.value = sprite.scaleY;
+    if (switchedSprite || lastPropXDivVal !== sprite.x) propXDiv.value = sprite.x;
+    if (switchedSprite || lastPropYDivVal !== sprite.y) propYDiv.value = sprite.y;
+    if (switchedSprite || lastPropOpacityDivVal !== sprite.opacity) propOpacityDiv.value = sprite.opacity;
+    if (switchedSprite || lastPropScaleXDivVal !== sprite.scaleX) propScaleXDiv.value = sprite.scaleX;
+    if (switchedSprite || lastPropScaleYDivVal !== sprite.scaleY) propScaleYDiv.value = sprite.scaleY;
     lastPropXDivVal = sprite.x;
     lastPropYDivVal = sprite.y;
     lastPropOpacityDivVal = sprite.opacity;
@@ -162,6 +164,7 @@ async function refreshSprites() {
     spritesDiv.appendChild(div);
     spriteObjects = [];
     for (const spr of cachedSprites) {
+        console.log({...spr});
         spriteObjects.push({
             name: spr.name,
             x: spr.x,
@@ -425,6 +428,7 @@ setInterval(async () => {
         upd = true;
     }
     if (lastPropOpacityDivVal !== (propOpacityDiv.value * 1) || 0) {
+        console.log(propOpacityDiv.value * 1, sprite.opacity, JSON.stringify(sprite));
         lastPropOpacityDivVal = sprite.opacity = (propOpacityDiv.value * 1) || 0;
         upd = true;
     }
