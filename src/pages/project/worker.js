@@ -12,7 +12,8 @@ onmessage = async ev => {
         keyboard: data => Object.assign(keyboard, data),
         screen: data => Object.assign(screen, data),
         mouseAction: data => mouseActions.push(data),
-        keyboardAction: data => keyboardActions.push(data)
+        keyboardAction: data => keyboardActions.push(data),
+        fps: data => screen.fps = data
     };
     onmessage = ev => {
         if (ev.data.event) {
@@ -31,8 +32,13 @@ onmessage = async ev => {
     }
 
     let [mouse, frozenMouse] = frozenBuilder({x: 0, y: 0, down: {}});
-    let [keyboard, frozenKeyboard] = frozenBuilder({keys: {}});
-    let [screen, frozenScreen] = frozenBuilder({width: 0, height: 0, isMaximized: false});
+    let keyboard = {};
+    const frozenKeyboard = new Proxy({}, {
+        get(target, p) {
+            return keyboard[p];
+        }
+    });
+    let [screen, frozenScreen] = frozenBuilder({width: 0, height: 0, isMaximized: false, fps: 0});
     const mouseActions = [];
     const keyboardActions = [];
 

@@ -2,6 +2,10 @@
     --global-overflow-x: w;
 }
 
+body {
+    overflow: hidden;
+}
+
 .container {
     display: flex;
     width: 100%;
@@ -217,4 +221,16 @@ canvas {
 
 input {
     user-select: none;
+}
+
+.holding-sprite {
+    position: fixed;
+    z-index: 10000;
+    transition: none;
+}
+
+.holding-sprite > img {
+    translate: -50% -50%;
+    background: rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 20px black;
 }

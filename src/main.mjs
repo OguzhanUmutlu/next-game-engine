@@ -2,6 +2,7 @@ import {app, BrowserWindow, dialog, ipcMain, Menu, MenuItem, shell} from "electr
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import * as child_process from "child_process";
 
 await app.whenReady();
 
@@ -93,7 +94,17 @@ const Data = {
             createdTimestamp: Date.now()
         }));
         fs.mkdirSync(path.join(p, "sprites"), {recursive: true});
-        fs.writeFileSync(path.join(p, "sprites", "My Sprite.js"), "console.log('Hello, world!')\n\nsprite.x += 10");
+        fs.writeFileSync(path.join(p, "sprites", "My Sprite.js"), `export function update() {
+    
+    if (keyboard.w) sprite.y++
+    
+    if (keyboard.a) sprite.x--
+    
+    if (keyboard.s) sprite.y--
+    
+    if (keyboard.d) sprite.x++
+    
+}`);
         fs.writeFileSync(path.join(p, "sprites", "sprites.json"), JSON.stringify([
             {
                 name: "My Sprite",
@@ -360,6 +371,12 @@ projectMenu.append(new MenuItem({
     label: "Open in explorer", async click() {
         if (!winQuery.path) return;
         await shell.openPath(os.platform() === "win32" ? winQuery.path.replaceAll("/", "\\") : winQuery.path);
+    }
+}));
+projectMenu.append(new MenuItem({
+    label: "Open in VSCode", async click() {
+        if (!winQuery.path) return;
+        child_process.execSync("code " + JSON.stringify(winQuery.path));
     }
 }));
 projectMenu.append(new MenuItem({

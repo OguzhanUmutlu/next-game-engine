@@ -17,8 +17,6 @@ const propScaleXDiv = document.getElementById("prop-scaleX");
 const propScaleYDiv = document.getElementById("prop-scaleY");
 const stopBtn = document.querySelectorAll(".stop");
 const terminalDiv = document.querySelector(".terminal");
-const minimizeBtn = document.getElementById("minimize-btn");
-const maximizeBtn = document.getElementById("maximize-btn");
 const spriteHoldDiv = document.querySelector(".holding-sprite");
 const canvas = document.querySelector(".scene > canvas");
 /*** @type {CanvasRenderingContext2D} */
@@ -40,6 +38,9 @@ let lastPropOpacityDivVal = "";
 let lastPropScaleXDivVal = "";
 let lastPropScaleYDivVal = "";
 let holdingSprite = null;
+let holdingSpriteOffset = null;
+let fps = 0;
+let lastRender = Date.now() - 1;
 
 function loadSpriteImage(name) {
     const img = new Image();
@@ -174,7 +175,7 @@ async function refreshSprites() {
     });
     spritesDiv.appendChild(div);
     spriteObjects = [];
-    for (const spr of cachedSprites) {
+    for (const spr of cachedSprites.sort((b, a) => a.z - b.z)) {
         spriteObjects.push({
             name: spr.name,
             x: spr.x,
@@ -290,11 +291,13 @@ declare global {
 }
 
 function render() {
+    fps = 1000 / (Date.now() - lastRender);
+    lastRender = Date.now();
     const rect = sceneDiv.getBoundingClientRect();
     const W = canvas.width = rect.width;
     const H = canvas.height = rect.height;
     for (const spr of spriteObjects) {
-        if (spr.opacity <= 0) continue;
+        if (spr.opacity <= 0 || holdingSprite === spr) continue;
         const img = spriteImages[spr.name];
         if (img) {
             ctx.save();
@@ -422,6 +425,12 @@ window.selectSpriteImage = async function selectSpriteImage() {
 };
 
 setInterval(async () => {
+    if (currentWorker) {
+        currentWorker.postMessage({
+            event: "fps",
+            data: fps
+        });
+    }
     if (!selectedSprite) return;
     const sprite = spriteObjects.find(i => i.name === selectedSprite);
     if (!sprite) return;
@@ -453,12 +462,20 @@ setInterval(async () => {
 });
 
 function updateWorkerMouse() {
-    if (!currentWorker) return;
     mouse.x = Math.round(mouse.__x * (isMaximized() ? canvas.width / innerWidth : 1) - canvas.width / 2);
     mouse.y = Math.round(-mouse.__y * (isMaximized() ? canvas.height / innerHeight : 1) + canvas.height / 2);
+    if (!currentWorker) return;
     currentWorker.postMessage({
         event: "mouse",
         data: mouse
+    });
+}
+
+function updateWorkerKeyboard() {
+    if (!currentWorker) return;
+    currentWorker.postMessage({
+        event: "keyboard",
+        data: keyboard
     });
 }
 
@@ -478,30 +495,99 @@ window.maximizeScene = function maximizeScene() {
     canvas.remove();
     sceneFullDiv.appendChild(canvas);
     sceneFullDiv.hidden = false;
+    codeDiv.hidden = true;
 };
 
 window.minimizeScene = function minimizeScene() {
     canvas.remove();
     sceneDiv.appendChild(canvas);
     sceneFullDiv.hidden = true;
+    codeDiv.hidden = false;
 };
 
+function getMouseTouchingSprite() {
+    for (let i = spriteObjects.length - 1; i >= 0; i--) {
+        const spr = spriteObjects[i];
+        const img = spriteImages[spr.name];
+        if (!img) continue;
+        const w2 = img.width / 2 * spr.scaleX;
+        const h2 = img.height / 2 * spr.scaleY;
+        const minX = spr.x - w2;
+        const maxX = spr.x + w2;
+        const minY = spr.y - h2;
+        const maxY = spr.y + h2;
+        if (
+            mouse.x >= minX &&
+            mouse.x <= maxX &&
+            mouse.y >= minY &&
+            mouse.y <= maxY
+        ) return spr;
+    }
+    return null;
+}
+
 const mouse = {__x: 0, __y: 0, x: 0, y: 0, down: {}};
+let keyboard = {};
 canvas.addEventListener("mousedown", e => {
+    const max = isMaximized();
+    mouse.__x = e.pageX - (max ? 0 : 10);
+    mouse.__y = e.pageY - (max ? 0 : 10);
     mouse.down[e.button] = true;
     updateWorkerMouse();
     if (!currentWorker) {
-        //todo: moving sprites with mouse
+        const sprite = getMouseTouchingSprite();
+        if (!sprite) return;
+        const img = spriteImages[sprite.name];
+        holdingSprite = sprite;
+        holdingSpriteOffset = [mouse.x - sprite.x, mouse.y - sprite.y];
+        spriteHoldDiv.style.left = (e.pageX - holdingSpriteOffset[0] * (max ? innerWidth / canvas.width : 1)) + "px";
+        spriteHoldDiv.style.top = (e.pageY + holdingSpriteOffset[1] * (max ? innerHeight / canvas.height : 1)) + "px";
+        spriteHoldDiv.hidden = false;
+        spriteHoldDiv.innerHTML = `<img src="${img.src}" draggable="false" style="scale: ${sprite.scaleX * (max ? innerWidth / canvas.width : 1)} ${sprite.scaleY * (max ? innerHeight / canvas.height : 1)}">`;
     }
 });
-canvas.addEventListener("mousemove", e => {
-    mouse.__x = e.pageX - 10;
-    mouse.__y = e.pageY - 10;
+addEventListener("mousemove", e => {
+    const max = isMaximized();
+    mouse.__x = e.pageX - (max ? 0 : 10);
+    mouse.__y = e.pageY - (max ? 0 : 10);
     updateWorkerMouse();
+    if (holdingSprite) {
+        spriteHoldDiv.style.left = (e.pageX - holdingSpriteOffset[0] * (max ? innerWidth / canvas.width : 1)) + "px";
+        spriteHoldDiv.style.top = (e.pageY + holdingSpriteOffset[1] * (max ? innerHeight / canvas.height : 1)) + "px";
+    }
 });
-addEventListener("mouseup", e => {
+addEventListener("mouseup", async e => {
+    const max = isMaximized();
+    mouse.__x = e.pageX - (max ? 0 : 10);
+    mouse.__y = e.pageY - (max ? 0 : 10);
     mouse.down[e.button] = false;
     updateWorkerMouse();
+    if (holdingSprite) {
+        spriteHoldDiv.hidden = true;
+        spriteHoldDiv.innerHTML = "";
+        const x = holdingSprite.x = mouse.x - holdingSpriteOffset[0];
+        const y = holdingSprite.y = mouse.y - holdingSpriteOffset[1];
+        if (holdingSprite.name === selectedSprite) {
+            lastPropScaleXDivVal = x;
+            lastPropScaleYDivVal = y;
+            propXDiv.value = x;
+            propYDiv.value = y;
+        }
+        await __bridge__.setSpriteProperties(path, holdingSprite.name, {x, y});
+        holdingSprite = null;
+    }
+});
+addEventListener("keydown", e => {
+    keyboard[e.key.length > 1 ? e.key : e.key.toLowerCase()] = true;
+    updateWorkerKeyboard();
+});
+addEventListener("keyup", e => {
+    keyboard[e.key.length > 1 ? e.key : e.key.toLowerCase()] = false;
+    updateWorkerKeyboard();
+});
+addEventListener("blur", () => {
+    keyboard = {};
+    updateWorkerKeyboard();
 });
 
 for (const btn of stopBtn) btn.hidden = true;
