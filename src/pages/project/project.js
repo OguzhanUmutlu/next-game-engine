@@ -31,6 +31,7 @@ let saveClearTimeout;
 let currentWorker;
 let spriteObjects = [];
 let spriteImages = {};
+let spriteImageId = {};
 let cachedSprites = [];
 let lastPropCode = "";
 let lastPropXDivVal = "";
@@ -42,9 +43,8 @@ let holdingSprite = null;
 
 function loadSpriteImage(name) {
     const img = new Image();
-    const t = Date.now();
-    img.src = path + "/sprites/images/" + name + ".png?t=" + t;
-    spriteImages[name] = {img, t};
+    img.src = path + "/sprites/images/" + name + ".png?t=" + spriteImageId[name];
+    spriteImages[name] = img;
 }
 
 async function updateSelectSprite(name) {
@@ -107,8 +107,8 @@ async function refreshSprites() {
         name.classList.add("sprite-name");
         name.innerText = sprite.name;
         const img = document.createElement("img");
-        const imgData = spriteImages[sprite.name];
-        img.src = path + "/sprites/images/" + sprite.name + ".png?t=" + (imgData ? imgData.t : Date.now());
+        spriteImageId = spriteImageId[sprite.name] ?? Date.now();
+        img.src = path + "/sprites/images/" + sprite.name + ".png?t=" + spriteImageId;
         div.appendChild(img);
         div.appendChild(name);
         const deleteBtn = document.createElement("div");
@@ -122,6 +122,7 @@ async function refreshSprites() {
                     await refreshSprites();
                     hidePopup();
                     delete spriteImages[sprite.name];
+                    delete spriteImageId[sprite.name];
                 }, "#25e025"]
             ]);
             showPopup();
@@ -155,6 +156,7 @@ async function refreshSprites() {
                     return;
                 }
                 await __bridge__.createSprite(path, name, extension);
+                delete spriteImageId[name]; // reset the id so it refreshes the image
                 await refreshSprites();
                 clearInterval(interval);
                 hidePopup();
@@ -188,7 +190,6 @@ async function refreshSprites() {
 }
 
 await refreshSprites();
-spriteImages = {};
 for (const spr of cachedSprites) loadSpriteImage(spr.name);
 
 addEventListener("focus", async () => {
@@ -302,7 +303,7 @@ function render() {
             if (spr.rotation !== 0) ctx.rotate(spr.rotation);
             if (spr.opacity !== 1) ctx.globalAlpha = spr.opacity;
             try {
-                ctx.drawImage(img.img, -img.img.width / 2, -img.img.height / 2);
+                ctx.drawImage(img, -img.width / 2, -img.height / 2);
             } catch (e) {
             }
             ctx.restore();
@@ -410,8 +411,9 @@ window.selectSpriteImage = async function selectSpriteImage() {
             await __bridge__.setSpriteImage(path, selectedSprite, new Int8Array(content));
             setPopupText("Sprite's image has been updated!");
             showPopup();
-            loadSpriteImage(selectedSprite);
+            delete spriteImageId[selectedSprite]; // so that it refreshes the image
             await refreshSprites();
+            loadSpriteImage(selectedSprite);
         };
         reader.readAsArrayBuffer(file);
     } catch (error) {

@@ -11,7 +11,8 @@ window.waitLoad = () => loadPromise;
 const defaultSettings = {
     pageTransition: true,
     globalTransition: true,
-    monacoEditor: true
+    monacoEditor: true,
+    codeTransition: false
 };
 window.engineSettings = {
     ...defaultSettings, ...JSON.parse(localStorage.getItem("settings") ?? "{}")
@@ -28,6 +29,10 @@ if (!engineSettings.pageTransition) {
     document.querySelector(":root").style.setProperty("--global-transition", "none");
     document.body.style.opacity = "1";
     document.body.style.translate = "0";
+}
+
+if (!engineSettings.codeTransition) {
+    document.querySelector(":root").style.setProperty("--code-transition", "none");
 }
 
 window.redirectTo = (page, extra = "") => {
@@ -85,14 +90,26 @@ if (engineSettings.globalTransition) {
 window.settingsPopup = async () => {
     setPopupText("<label><input type='checkbox' data-opt='pageTransition' data-opt-attr='checked' spellCheck='false'> Page transition</label><br>" +
         "<label><input type='checkbox' data-opt='globalTransition' data-opt-attr='checked' spellCheck='false'> Global transition</label><br>" +
-        "<label><input type='checkbox' data-opt='monacoEditor' data-opt-attr='checked' spellCheck='false'> Monaco Editor</label><br>", [
+        "<label><input type='checkbox' data-opt='monacoEditor' data-opt-attr='checked' spellCheck='false'> Monaco Editor</label><br>" +
+        "<label><input type='checkbox' data-opt='codeTransition' data-opt-attr='checked' spellCheck='false'> Code transition</label>", [
         ["Cancel", hidePopup],
         ["Save settings", async () => {
+            let upd = false;
             document.querySelectorAll("[data-opt]").forEach(i => {
-                engineSettings[i.getAttribute("data-opt")] = i[i.getAttribute("data-opt-attr") ?? "value"];
+                const n = i.getAttribute("data-opt");
+                const v = i[i.getAttribute("data-opt-attr") ?? "value"];
+                if (engineSettings[n] !== v) {
+                    engineSettings[n] = v;
+                    upd = true;
+                }
             });
             saveEngineSettings();
-            setPopupText("Successfully saved settings!");
+            setPopupText("Successfully saved settings!", [
+                ["Close", () => {
+                    hidePopup();
+                    if (upd) location.reload();
+                }]
+            ]);
         }, "#25e025"]
     ]);
     showPopup();
