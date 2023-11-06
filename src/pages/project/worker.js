@@ -33,11 +33,7 @@ onmessage = async ev => {
 
     let [mouse, frozenMouse] = frozenBuilder({x: 0, y: 0, down: {}});
     let keyboard = {};
-    const frozenKeyboard = new Proxy({}, {
-        get(target, p) {
-            return keyboard[p];
-        }
-    });
+    const frozenKeyboard = new Proxy({}, {get: (target, p) => keyboard[p]});
     let [screen, frozenScreen] = frozenBuilder({width: 0, height: 0, isMaximized: false, fps: 0});
     const mouseActions = [];
     const keyboardActions = [];
@@ -50,12 +46,13 @@ onmessage = async ev => {
         postMessage({
             sprites,
             terminate: true,
-            error: error ? (error instanceof Error ? error.toString() : "Error: " + (error || "").toString()) : undefined
+            error: error ? error.toString() : undefined
         });
     };
 
     const sendError = error => {
-        postMessage({error: error.toString()});
+        error = error || "";
+        postMessage({error: error instanceof Error ? error.toString() : "Error: " + error.toString()});
     };
 
     const stringLookup = {
@@ -77,23 +74,40 @@ onmessage = async ev => {
         return stringLookup[typeof m](m);
     }
 
+    function debug(...m) {
+        postMessage({debug: m.map(i => toString(i).split("\n")).flat()});
+    }
+
+    debug.clear = function () {
+        postMessage({debugClear: true});
+    };
+
+    function exit(code = 0) {
+        stop("(0x" + (typeof code === "number" ? code : 1).toString(16).padStart(4, "0") + ") Terminated by script.");
+    }
+
     for (let i = 0; i < sprites.length; i++) {
         const sprite = sprites[i];
         const code = sprite.code;
         delete sprite.code;
         sprite.id = ++spriteId;
-        sprite.update = () => update();
-        self.__spriteTmp__ = [frozenMouse, frozenKeyboard, frozenScreen, sprite, (...m) => postMessage({debug: m.map(i => toString(i).split("\n")).flat()})];
+        const Next = {
+            update,
+            sprites,
+            mouse: frozenMouse,
+            keyboard: frozenKeyboard,
+            screen: frozenScreen,
+            debug
+        };
+        self.__spriteTmp__ = [sprite, Next, exit];
         let err;
         const mdl = await import(URL.createObjectURL(new Blob([
-            "const [mouse, keyboard, screen, sprite, debug] = __spriteTmp__;" +
-            "const updateSprite = sprite.update;" +
-            "delete sprite.update;" +
+            "const [sprite, Next, exit] = self.__spriteTmp__;" +
             "delete self.__spriteTmp__;" +
             code
         ], {type: "application/javascript"}))).then(r => r).catch(r => err = r);
         if (err) {
-            stop(err);
+            sendError(err);
             throw err;
         }
         if (mdl.update) spriteCalls.push(mdl.update);
@@ -129,7 +143,7 @@ onmessage = async ev => {
                     }
                 }
                 if (!fn) {
-                    stop("A sprite was removed");
+                    sendError("A sprite was removed");
                     throw "A sprite was removed.";
                 }
             }

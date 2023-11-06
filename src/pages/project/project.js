@@ -347,7 +347,7 @@ window.clearTerminal = function clearTerminal() {
     for (let i = 1; i < children.length; i++) {
         children[i].remove();
     }
-}
+};
 
 window.startGame = async function startGame() {
     await stopGame();
@@ -375,6 +375,10 @@ window.startGame = async function startGame() {
         }
         if (ev.data.debug) {
             ev.data.debug.forEach(i => logToTerminal(i));
+            return;
+        }
+        if (ev.data.debugClear) {
+            clearTerminal();
             return;
         }
         spriteObjects = ev.data;

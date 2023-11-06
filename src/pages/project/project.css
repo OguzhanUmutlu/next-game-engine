@@ -66,6 +66,7 @@ canvas {
     position: fixed;
     cursor: pointer;
     background: transparent;
+    left: calc(50% - 50px);
 }
 
 .clear > img {

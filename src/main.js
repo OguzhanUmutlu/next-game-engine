@@ -7,8 +7,16 @@ const child_process = require("child_process");
 const RECENT_PROJECTS = "./recent_projects.json";
 const DEFAULT_PROJECT_PATH = path.join(os.homedir(), "NextProjects");
 
-if (!fs.existsSync(RECENT_PROJECTS)) fs.writeFileSync(RECENT_PROJECTS, "{}");
-else if (!fs.statSync(RECENT_PROJECTS).isFile()) fs.rmSync(RECENT_PROJECTS, {recursive: true});
+if (fs.existsSync(RECENT_PROJECTS) && !fs.statSync(RECENT_PROJECTS).isFile()) fs.rmSync(RECENT_PROJECTS, {recursive: true});
+if (!fs.existsSync(RECENT_PROJECTS)) {
+    if (fs.existsSync(DEFAULT_PROJECT_PATH) && fs.statSync(DEFAULT_PROJECT_PATH).isDirectory()) {
+        const recents = {};
+        for (const file of fs.readdirSync(DEFAULT_PROJECT_PATH)) {
+            recents[DEFAULT_PROJECT_PATH.replaceAll("\\", "/") + "/" + file] = Date.now();
+        }
+        fs.writeFileSync(RECENT_PROJECTS, JSON.stringify(recents));
+    } else fs.writeFileSync(RECENT_PROJECTS, "{}");
+}
 
 const Data = {
     copySync: (from, dest) => {

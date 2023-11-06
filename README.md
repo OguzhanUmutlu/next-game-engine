@@ -18,3 +18,12 @@ opened the terminal in!
 You can now start the engine by just clicking to the
 `run.cmd` or `run.vbs`(For windows) or `run.sh`(For linux/osx) file
 in the directory it installed the engine in.
+
+# API
+
+You can use the API of the engine to:
+
+- Alter/view the properties of a sprite
+- Check where the mouse is
+- Check which buttons of the mouse are being pressed
+- Check which keys are being pressed
