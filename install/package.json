@@ -1,0 +1,24 @@
+{
+  "name": "install-next-engine",
+  "version": "1.0.2",
+  "description": "Installs Next Game Engine!",
+  "main": "index.js",
+  "bin": {
+    "install-next-engine": "index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OguzhanUmutlu/next-game-engine.git"
+  },
+  "homepage": "https://github.com/OguzhanUmutlu/next-game-engine#readme",
+  "keywords": [
+    "next",
+    "engine",
+    "game",
+    "web",
+    "python",
+    "play"
+  ],
+  "author": "OguzhanUmutlu",
+  "license": "MIT"
+}
