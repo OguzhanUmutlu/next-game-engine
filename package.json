@@ -3,11 +3,14 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "scripts": {
+    "start": "npx electron ."
+  },
   "keywords": [],
   "author": "OguzhanUmutlu",
   "license": "MIT",
   "dependencies": {
-    "electron": "^27.0.2",
+    "electron": "^27.0.3",
     "monaco-editor": "^0.44.0"
   }
 }

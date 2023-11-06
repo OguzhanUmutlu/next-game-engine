@@ -4,22 +4,24 @@ A scratch-like text-based game engine that supports Python and JavaScript.
 
 # Installing
 
-*Note: You need node.js installed in order to use the app.*
+First install node.js from here: https://nodejs.org/en/download
 
-First clone the project to somewhere in your device.
+Now just start a terminal/cmd and run:
 
-```shell
-git clone https://github.com/OguzhanUmutlu/next-game-engine && cd next-game-engine
-```
-
-Afterward, install the dependencies from NPM.
+### For Windows:
 
 ```shell
-npm install
+curl -O https://oguzhanumutlu.github.io/next-game-engine/install/setup.cmd && ./setup.cmd
 ```
 
-And you are done! You can either run the `test.cmd` file, or you can run:
+### For Linux:
 
 ```shell
-npx electron .
+curl https://oguzhanumutlu.github.io/next-game-engine/install/setup.sh | bash
 ```
+
+That's it! This should now have set up the engine to the directory you
+opened the terminal in!
+
+You can now start the engine by just clicking to the `run.cmd`(For windows)
+or `run.sh`(For linux/osx) file in the directory it installed the engine in.

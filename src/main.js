@@ -1,10 +1,8 @@
-import {app, BrowserWindow, dialog, ipcMain, Menu, MenuItem, shell} from "electron";
-import * as fs from "fs";
-import * as path from "path";
-import * as os from "os";
-import * as child_process from "child_process";
-
-await app.whenReady();
+const {app, BrowserWindow, dialog, ipcMain, Menu, MenuItem, shell} = require("electron");
+const fs = require("fs");
+const path = require("path");
+const os = require("os");
+const child_process = require("child_process");
 
 const RECENT_PROJECTS = "./recent_projects.json";
 const DEFAULT_PROJECT_PATH = path.join(os.homedir(), "NextProjects");
@@ -192,7 +190,7 @@ const Data = {
         fs.writeFileSync(spritePath, "console.log('Hello, world!')\n\nsprite.x += 10");
         if (fs.existsSync(imagePath) && !fs.statSync(imagePath).isDirectory()) fs.rmSync(imagePath, {recursive: true});
         if (!fs.existsSync(imagePath)) fs.mkdirSync(imagePath, {recursive: true});
-        fs.copyFileSync(__dirname + "/src/assets/sprite.png", spriteImagePath);
+        fs.copyFileSync(__dirname + "/assets/sprite.png", spriteImagePath);
         sprites.push({
             name,
             extension,
@@ -305,7 +303,7 @@ const Data = {
             const spritePath = path.join(p, "sprites", "images", spr.name + ".png");
             if (fs.existsSync(spritePath) && !fs.statSync(spritePath).isFile()) fs.rmSync(spritePath, {recursive: true});
             if (fs.existsSync(spritePath)) continue;
-            fs.copyFileSync(__dirname + "/src/assets/sprite.png", spritePath);
+            fs.copyFileSync(__dirname + "/assets/sprite.png", spritePath);
         }
     }
 };
@@ -370,82 +368,88 @@ ipcMain.handle("openProjectPopup", async () => {
     Data.addRecentProject(path.dirname(result.filePaths[0].replaceAll("\\", "/")));
 });
 
-const win = new BrowserWindow({
-    show: false,
-    minWidth: 1000,
-    minHeight: 700,
-    width: 1000,
-    height: 700,
-    webPreferences: {
-        preload: __dirname + "/src/bridge.js"
-    }
-});
+async function run() {
+    await app.whenReady();
 
-const projectMenu = new Menu();
-projectMenu.append(new MenuItem({
-    label: "Close", async click() {
-        await win.loadFile(__dirname + "/src/pages/index/index.html");
-    }
-}));
-const openInMenu = new Menu();
-openInMenu.append(new MenuItem({
-    label: "File explorer", async click() {
-        if (!winQuery.path) return;
-        await shell.openPath(os.platform() === "win32" ? winQuery.path.replaceAll("/", "\\") : winQuery.path);
-    }
-}));
-for (const editor of [
-    [hasIdea(), ideaCmd, "Intellij IDEA"],
-    [hasPhpStorm(), phpStormCmd, "Php Storm"],
-    [hasWebStorm(), webStormCmd, "Web Storm"],
-    [hasVSC(), "code", "Visual Studio Code"]
-]) {
-    if (!editor[0]) continue;
-    openInMenu.append(new MenuItem({
-        label: editor[2], async click() {
-            if (!winQuery.path) return;
-            child_process.exec(editor[1] + " " + JSON.stringify(winQuery.path), r => r);
+    const win = new BrowserWindow({
+        show: false,
+        minWidth: 1000,
+        minHeight: 700,
+        width: 1000,
+        height: 700,
+        webPreferences: {
+            preload: __dirname + "/bridge.js"
+        }
+    });
+
+    const projectMenu = new Menu();
+    projectMenu.append(new MenuItem({
+        label: "Close", async click() {
+            await win.loadFile(__dirname + "/pages/index/index.html");
         }
     }));
+    const openInMenu = new Menu();
+    openInMenu.append(new MenuItem({
+        label: "File explorer", async click() {
+            if (!winQuery.path) return;
+            await shell.openPath(os.platform() === "win32" ? winQuery.path.replaceAll("/", "\\") : winQuery.path);
+        }
+    }));
+    for (const editor of [
+        [hasIdea(), ideaCmd, "Intellij IDEA"],
+        [hasPhpStorm(), phpStormCmd, "Php Storm"],
+        [hasWebStorm(), webStormCmd, "Web Storm"],
+        [hasVSC(), "code", "Visual Studio Code"]
+    ]) {
+        if (!editor[0]) continue;
+        openInMenu.append(new MenuItem({
+            label: editor[2], async click() {
+                if (!winQuery.path) return;
+                child_process.exec(editor[1] + " " + JSON.stringify(winQuery.path), r => r);
+            }
+        }));
+    }
+    projectMenu.append(new MenuItem({
+        label: "Open in", type: "submenu", submenu: openInMenu
+    }));
+    projectMenu.append(new MenuItem({
+        label: "Refresh", async click() {
+            win.webContents.reload();
+        }
+    }));
+    projectMenu.append(new MenuItem({
+        label: "Settings", async click() {
+            await win.webContents.executeJavaScript("window.settingsPopup()");
+        }
+    }));
+    projectMenu.append(new MenuItem({
+        label: "DevTools", async click() {
+            win.webContents.toggleDevTools();
+        }
+    }));
+    projectMenu.append(new MenuItem({
+        label: "Force stop", async click() {
+            await win.webContents.executeJavaScript("window.stop()");
+        }
+    }));
+
+    let winPath = "index.html";
+    let winQuery = {};
+    ipcMain.on("pathname", (_, path, query) => {
+        winPath = path;
+        winQuery = query;
+        if (path.endsWith("project.html")) {
+            win.setMenu(projectMenu);
+        } else {
+            win.setMenu(null);
+            //win.webContents.closeDevTools();
+        }
+    });
+
+    win.setMenu(null);
+    win.maximize();
+    await win.loadFile(__dirname + "/pages/index/index.html");
+    win.show();
 }
-projectMenu.append(new MenuItem({
-    label: "Open in", type: "submenu", submenu: openInMenu
-}));
-projectMenu.append(new MenuItem({
-    label: "Refresh", async click() {
-        win.webContents.reload();
-    }
-}));
-projectMenu.append(new MenuItem({
-    label: "Settings", async click() {
-        await win.webContents.executeJavaScript("window.settingsPopup()");
-    }
-}));
-projectMenu.append(new MenuItem({
-    label: "DevTools", async click() {
-        win.webContents.toggleDevTools();
-    }
-}));
-projectMenu.append(new MenuItem({
-    label: "Force stop", async click() {
-        await win.webContents.executeJavaScript("window.stop()");
-    }
-}));
 
-let winPath = "index.html";
-let winQuery = {};
-ipcMain.on("pathname", (_, path, query) => {
-    winPath = path;
-    winQuery = query;
-    if (path.endsWith("project.html")) {
-        win.setMenu(projectMenu);
-    } else {
-        win.setMenu(null);
-        //win.webContents.closeDevTools();
-    }
-});
-
-win.setMenu(null);
-win.maximize();
-await win.loadFile(__dirname + "/src/pages/index/index.html");
-win.show();
+run().then(r => r);

@@ -1,2 +1,1 @@
-global.__dirname = __dirname;
-import("./src/main.mjs");
+require("./src/main.js");
