@@ -88,9 +88,11 @@ onmessage = async ev => {
 
     for (let i = 0; i < sprites.length; i++) {
         const sprite = sprites[i];
-        const code = sprite.code;
+        const {code, extension} = sprite;
         delete sprite.code;
+        delete sprite.extension;
         sprite.id = ++spriteId;
+        if (extension === ".py") continue;
         const Next = {
             update,
             sprites,

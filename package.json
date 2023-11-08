@@ -11,6 +11,7 @@
   "license": "MIT",
   "dependencies": {
     "electron": "^27.0.3",
-    "monaco-editor": "^0.44.0"
+    "monaco-editor": "^0.44.0",
+    "pyodide": "^0.24.1"
   }
 }

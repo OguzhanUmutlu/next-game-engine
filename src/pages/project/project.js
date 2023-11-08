@@ -23,6 +23,7 @@ const propertiesDiv = document.querySelector(".properties");
 const canvas = document.querySelector(".scene > canvas");
 /*** @type {CanvasRenderingContext2D} */
 const ctx = canvas.getContext("2d");
+const python = new Worker("./python_worker.js");
 
 let selectedSprite = null;
 let loadedEditor;
@@ -44,6 +45,30 @@ let holdingSprite = null;
 let holdingSpriteOffset = null;
 let fps = 0;
 let lastRender = Date.now() - 1;
+let currentGameInterval;
+let __pTmp;
+let __pRdy;
+const pyReqList = {};
+let pyId = 0;
+const pythonReady = new Promise(r => __pRdy = r);
+
+python.addEventListener("message", __pTmp = () => {
+    python.removeEventListener("message", __pTmp);
+    __pRdy();
+    logToTerminal("Python is loaded!");
+    python.addEventListener("message", ({data}) => {
+        if (!data) return;
+        if (pyReqList[data.id]) return pyReqList[data.id](data.result);
+        if (data.stdout) data.stdout.forEach(i => logToTerminal(i));
+    });
+});
+
+async function runPython(code) {
+    await pythonReady;
+    pyId++;
+    python.postMessage({id: pyId, code});
+    return new Promise(r => pyReqList[pyId] = r);
+}
 
 function loadSpriteImage(name) {
     const img = new Image();
@@ -227,7 +252,7 @@ if (engineSettings.monacoEditor) {
         });
         loadedEditor = editor;
         editor.onDidChangeModelContent(onCodeUpdate);
-        monaco.languages.typescript.typescriptDefaults.addExtraLib(`
+        monaco.languages.typescript.javascriptDefaults.addExtraLib(`
 type Mouse = {
   x: number
   y: number
@@ -304,7 +329,7 @@ function render() {
             ctx.save();
             ctx.translate(spr.x + W / 2, -spr.y + H / 2);
             ctx.scale(spr.scaleX, spr.scaleY);
-            if (spr.rotation !== 0) ctx.rotate(spr.rotation);
+            if (spr.rotation !== 0) ctx.rotate(spr.rotation / 180 * Math.PI);
             if (spr.opacity !== 1) ctx.globalAlpha = spr.opacity;
             try {
                 ctx.drawImage(img, -img.width / 2, -img.height / 2);
@@ -352,10 +377,13 @@ window.clearTerminal = function clearTerminal() {
 window.startGame = async function startGame() {
     await stopGame();
     await refreshSprites();
+    const hasPython = cachedSprites.some(i => i.extension === ".py");
+    if (hasPython) await pythonReady;
     for (const btn of stopBtn) btn.hidden = false;
     for (let i = 0; i < cachedSprites.length; i++) {
         const spr = cachedSprites[i];
         spriteObjects[i].code = await __bridge__.fetchSpriteCode(path, spr.name);
+        spriteObjects[i].extension = spr.extension;
     }
     const worker = new Worker("./worker.js");
     currentWorker = worker;
@@ -385,9 +413,36 @@ window.startGame = async function startGame() {
     });
     updateWorkerMouse();
     updateWorkerScreen();
+
+    if (hasPython) {
+        let lastUpdate = Date.now() - 1;
+        let stopped = false;
+        currentGameInterval = () => stopped = true;
+
+        const objL = [];
+        for (const p of spriteObjects) {
+            if (p.extension !== ".py") continue;
+            const r = await runPython(p.code);
+            objL.push([p, r]);
+        }
+
+        async function update() {
+            if (!currentWorker || stopped) return;
+            const dt = (Date.now() - lastUpdate) / 1000;
+            lastUpdate = Date.now();
+            for (let i = 0; i < objL.length; i++) {
+                const obj = objL[i];
+            }
+            // currentWorker.postMessage(spriteObjects);
+            setTimeout(update);
+        }
+
+        await update();
+    }
 };
 
 window.stopGame = async function stopGame() {
+    if (currentGameInterval) currentGameInterval();
     if (currentWorker) currentWorker.terminate();
     currentWorker = null;
     for (let i = 0; i < spriteObjects.length; i++) {
@@ -544,6 +599,7 @@ canvas.addEventListener("mousedown", e => {
     mouse.__y = e.pageY - (max ? 0 : 10);
     mouse.down[e.button] = true;
     updateWorkerMouse();
+    if (holdingSprite) return;
     if (!currentWorker) {
         const sprite = getMouseTouchingSprite();
         if (!sprite) return;
@@ -607,3 +663,5 @@ addEventListener("resize", () => {
     updateWorkerMouse();
     updateWorkerScreen();
 });
+
+logToTerminal("Python is loading...");
